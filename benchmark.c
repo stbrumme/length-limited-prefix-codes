@@ -71,16 +71,14 @@ int main(int argc, char* argv[])
 
     // read the first 256 values
     for (i = 0; i < MAXSYMBOLS; i++)
-      if (feof(handle))
+      if (feof(handle) || fscanf(handle, "%u", &histogram[i]) != 1)
         histogram[i] = 0;
-      else
-        fscanf(handle, "%d", &histogram[i]);
 
     fclose(handle);
   }
 
   // parameters of length limiting algorithms
-  unsigned int  numCodes  = MAXSYMBOLS;
+  int numCodes = MAXSYMBOLS;
   unsigned char codeLengths[MAXSYMBOLS];
   unsigned char maxBits;
 
@@ -131,7 +129,7 @@ int main(int argc, char* argv[])
       break;
 
     default:
-      printf("invalid algorithm\n");
+      printf("invalid algorithm %d\n", algorithm);
       return 2;
   }
 
@@ -157,21 +155,22 @@ int main(int argc, char* argv[])
   // check Kraft value (must not be greater than 1.0)
   unsigned long long one = 1ULL << maxBits;
   unsigned long long sum = 0;
+  unsigned int  numUsedCodes = 0;
   for (i = 0; i < numCodes; i++)
     if (codeLengths[i] > 0)
+    {
       sum += one >> codeLengths[i];
+      numUsedCodes++;
+    }
   double kraft = sum / (double) one;
 
   // output
   printf("algorithm: %s\n", name);
+  printf("%d symbols, %d are used at least once\n", numCodes, numUsedCodes);
   printf("limit to %d bits (max. %d bits actually produced)\n", limitBits, maxBits);
   printf("%lld => %lld bits (%.2f%%)\n", original, compressed, percentage);
-  printf("check Kraft value: %s (%.6f)\n", kraft <= 1 ? "ok" : "FAILED", kraft);
+  printf("check Kraft sum: %s (%.6f)\n", kraft <= 1 ? "ok" : "FAILED", kraft);
   printf("repeat %dx\n", repeat);
-
-  // debug: show histogram and code lengths
-  //for (i = 0; i < numCodes; i++)
-  //  printf("%d=%d/%d\t", i, histogram[i], codeLengths[i]);
 
   return 0;
 }

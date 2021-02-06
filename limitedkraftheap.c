@@ -238,8 +238,8 @@ unsigned char limitedKraftHeap(unsigned char maxLength, unsigned int numCodes, c
 
   Heap heap;
   heap.size = 0;
-  heap.keys   = malloc(numCodes * sizeof(float));
-  heap.values = malloc(numCodes * sizeof(unsigned int));
+  heap.keys   = (float*)        malloc(numCodes * sizeof(float));
+  heap.values = (unsigned int*) malloc(numCodes * sizeof(unsigned int));
 
   // start with rounded optimal code length
   for (i = 0; i < numCodes; i++)
@@ -285,25 +285,25 @@ unsigned char limitedKraftHeap(unsigned char maxLength, unsigned int numCodes, c
   while (spent > one)
   {
     // extract code with largest gain (theoretical entropy minus code length)
-    float     gain = heap.keys  [0];
-    unsigned int i = heap.values[0];
+    float        gain = heap.keys  [0];
+    unsigned int code = heap.values[0];
     heap_removeTop(&heap);
 
     // all valid codes except those already at maximum length
-    if (codeLengths[i] == 0 || codeLengths[i] >= maxLength)
+    if (codeLengths[code] == 0 || codeLengths[code] >= maxLength)
       continue;
 
     // extend code by one more bit
-    codeLengths[i]++;
+    codeLengths[code]++;
     // reduce Kraft sum accordingly
-    spent -= one >> codeLengths[i];
+    spent -= one >> codeLengths[code];
     // exit early if done
     if (spent <= one)
       break;
 
     // re-insert into the heap
     gain--;
-    heap_insert(&heap, gain, i);
+    heap_insert(&heap, gain, code);
   }
 
   // optional: Kraft sum is below one, therefore a few codes might become shorter
@@ -311,15 +311,15 @@ unsigned char limitedKraftHeap(unsigned char maxLength, unsigned int numCodes, c
   while (spent < one && heap.size > 0)
   {
     // extract code with largest gain (theoretical entropy minus code length)
-    unsigned int i = heap.values[0];
+    unsigned int code = heap.values[0];
     heap_removeTop(&heap);
 
     // check if removing one bit still preserves Kraft inequality
-    unsigned long long have = one >> codeLengths[i];
+    unsigned long long have = one >> codeLengths[code];
     if (one - spent >= have)
     {
       // yes, adjust this code
-      codeLengths[i]--;
+      codeLengths[code]--;
       spent += have;
     }
   }

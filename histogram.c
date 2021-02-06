@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   }
 
   // for various loops
-  int i;
+  size_t i;
 
   // histogram
   unsigned int histogram[256] = { 0 };

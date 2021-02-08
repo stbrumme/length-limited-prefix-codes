@@ -1,11 +1,11 @@
 # Introduction
 
 This is a collection of various algorithms to produce length-limited prefix codes.\
-Code is written in plain C with tons of comments and there are no dependencies on third-party libraries - it just uses C standard stuff.
+My library is written in plain C with tons of comments and there are no dependencies on third-party libraries - it just uses C standard stuff.
 
 See my [homepage](https://create.stephan-brumme.com/length-limited-prefix-codes/) for more information.
 
-All code is zlib-licensed.
+All code is [zlib](LICENSE)-licensed.
 
 
 # Overview
@@ -47,8 +47,8 @@ and one output parameter:
 
 The return value is the longest bit length or zero if the algorithm failed.
 
-However, this shared interface comes with a little bit of overhead - sometimes doubling code size and/or execution time.\
-Therefore most files have a second public function which is more specialized for its algorithm but may have a few restrictions.\
+However, this shared interface comes with a little bit of overhead: sometimes doubling code size and/or execution time.
+Therefore most files have a second public function which is more specialized for its algorithm but may have a few restrictions.
 A common case is that the histogram has to be sorted.
 
 
@@ -58,7 +58,7 @@ Package-Merge and both Kraft implementations generate prefix codes "from scratch
 
 All other routines consist of two steps:
 1. an external function which produces Huffman codes
-2. limiting the lengths of steps (if necessary)
+2. limiting the lengths of step 1 (if necessary)
 
 Alistair Moffat's [in-place algorithm](https://people.eng.unimelb.edu.au/ammoffat/inplace.c) is a fast and compact [implementation](moffat.c)
 and my choice for step 1.
@@ -92,6 +92,8 @@ MiniZ on the other side immediately reduces all oversized codes to the maximum a
 
 MiniZ's approach is almost always faster. But frankly speaking, runtime is negligible in comparison to the Huffman code generation which runs beforehand.
 
+The resulting prefix codes are pretty much always identical.
+
 [GZip](https://www.gzip.org/)'s approach to limiting prefix code lengths [looks a bit more complex](https://github.com/madler/zlib/blob/master/inftrees.c) but is essentially the same.
 
 
@@ -101,26 +103,28 @@ I found a super simple way to limit lengths in [BZip2](https://sourceware.org/bz
 1. create Huffman codes
 2. if some of those codes exceed the limit then reduce symbols' frequencies and repeat step 1
 
-The are various way to perform step 2. BZip2 is dividing each symbol's frequency by 2 (and clears the lowest 8 bits, see [its code](https://sourceware.org/git/?p=bzip2.git;a=blob;f=huffman.c;h=43a1899e4688e80a5b0027203426e319fda890ba;hb=HEAD#l142) ).
+There are various ways to perform step 2. BZip2 is dividing each symbol's frequency by 2 (and clears the lowest 8 bits, see [its code](https://sourceware.org/git/?p=bzip2.git;a=blob;f=huffman.c;h=43a1899e4688e80a5b0027203426e319fda890ba;hb=HEAD#l142)).
 Care must be taken that no frequency becomes zero because that would indicate the symbol isn't used.
 
-[My code](limitedbzip2.c) is a bit more flexible: you can specify a constant `DIVIDE_BY` (default: `2`) and a constant `EXTRA_SHIFT` (default: `0`).\
+[My code](limitedbzip2.c) is a bit more flexible: you can specify a constant `DIVIDE_BY` (default: `2`) and a constant `EXTRA_SHIFT` (default: `0`).
 Setting `EXTRA_SHIFT` to `8` will make the code behave just like BZip2 but I found that `0` leads to better (= shorter) code lengths at no significant performance loss.
 
 I encountered multiple input data sets where a higher `DIVIDE_BY`, e.g. `3` instead of `2`, actually improved code lengths AND made the algorithm run faster.
+There is no obvious way to tell which constants are suited best for a certain data set.
 
-In general, performance varies wildly depending on the number of iterations.\
-Step 1 clearly dominates execution time, step 2 is almost for free.
+In general, performance varies wildly and mainly depends on the number of iterations.\
+Step 1 clearly dominates execution time, step 2 comes almost for free.
 
 
 # Kraft codes
 
 The [Kraft-McMillan inequality](https://en.wikipedia.org/wiki/Kraft%E2%80%93McMillan_inequality) must be true for each prefix code.
 
-In mathematical terms: if `L1`,`L2`,...,`Ln` are code lengths then `sum(2^-Lx) <= 1` where `x`=`1`,`2`,...,`n` (I call it the Kraft sum)
+In mathematical terms: if `L1`,`L2`,...,`Ln` are code lengths then `sum(2^-Lx) <= 1` where `x`=`1`,`2`,...,`n`\
+(called the Kraft sum)
 
-The optimal code length for a symbol `x` is determined by its entropy: `Lx = -log2(px)` where `Lx` is the number of bits for symbol and `p` how likely the symbol is.\
-For example, if every fifth symbol in a certain data set is `x`, then `px = 1/5 = 0.2` and should be encoded with `Lx = -log2(0.2) = 2.322...` bits.
+The optimal code length for a symbol `x` is determined by its entropy: `Lx = -log2(px)` where `Lx` is the number of bits for symbol and `p` how likely the symbol is.
+For example, if every fifth symbol in a certain data set is `x`, then `px = 1/5 = 0.2` and should be encoded with `Lx = -log2(0.2) ~ 2.322` bits.
 
 There are multiple ways to adjust these bit lengths such that:
 1. each bit length is an integer
@@ -128,7 +132,7 @@ There are multiple ways to adjust these bit lengths such that:
 3. the code is close to optimal
 4. (optional) fast execution time
 
-I implementated two strategies, named A and B in this document.\
+I implemented two strategies, named A and B in this document.\
 The code repository calls them `limitedKraft` and `limitedKraftHeap`
 
 ## Kraft / Strategy A
@@ -141,8 +145,8 @@ The [first](limitedkraft.c) strategy shares many concepts with [Charles Bloom's 
 
 Charles avoided `log2` computation due to its performance implications.\
 I found a fast `log2` approximation by [Laurent de Soras](https://www.flipcode.com/archives/Fast_log_Function.shtml).
-His code is built on clever bit-twiddling tricks and about 7x faster than a call to the native `log2` function.\
-Tweaking it for high accuracy at `.5` (while dramatically reducing accuracy on other fractions) made it even faster.\
+His code is built on clever bit-twiddling tricks and about 7x faster than a call to the native `log2` function.
+Tweaking it for high accuracy at `.5` (while dramatically reducing accuracy on other fractions) made it even faster.
 (`.5` is a relevant threshold to decide whether to round up or down.)
 
 I decided to have multiple iterations for step 3. The first iteration rounds up every symbol (= adds a bit) with a fraction between `.5 - 28/64` and `.5`.\
@@ -186,7 +190,8 @@ Parameters:
   * `0` - "unlimited" Huffman codes / Moffat's in-place algorithm
 * `BITS`
   * maximum number of bits per encoded symbol
-  * if too low,  then it may fail
+  * if too low, then it may fail
+  * irrelevant if `ALGORITHM` is `0`
 * `REPEAT` (optional parameter)
   * all algorithms are typically too fast to reliably measure execution time
   * therefore you can run the same algorithm multiple times
@@ -198,7 +203,7 @@ Parameters:
   * if the parameter is omitted then switch to a pre-computed histogram of the first 64k of `enwik`
 
 It's important to note that each iteration calls the function with the shared interface.
-That means that, e.g. the JPEG length-limiting algorithm, sorts the symbol histogram each time instead of re-using it from a previous iteration.
+It means that for example the JPEG length-limiting algorithm sorts the symbol histogram each time instead of re-using it from a previous iteration.\
 In my eyes any other way would measure wrong execution time - the only reason `REPEAT` exists is that it's quite hard to time a single iteration.
 
 
@@ -206,9 +211,8 @@ In my eyes any other way would measure wrong execution time - the only reason `R
 
 Here are a few results from the first 64k bytes of `enwik`, measured on a Core i7 / GCC x64:
 
-Syntax was:\
 `time ./benchmark 0 12 100000`\
-* where `0` is the algorithm's ID and was in `0`...`6`\
+* where `0` is the algorithm's ID and was between `0` and `6`
 * each algorithm ran 100,000 times
 * the unadjusted Huffman codes have up to 16 bits
 * uncompressed data has 64k bytes = 524288 bits
@@ -239,7 +243,7 @@ length limit | Package-Merge  | Kraft Strategy B
 	
 For comparison: Moffat's Huffman algorithm needs 0.55 seconds and its longest prefix code has 16 bits.
 
-This data set was chosen pretty much at random (well, I knew `enwik` pretty well from my [smalLZ4](https://create.stephan-brumme.com/smallz4/) project).
+This data set was chosen pretty much at random (well, I knew `enwik` quite well from my [smalLZ4](https://create.stephan-brumme.com/smallz4/) project).\
 I highly encourage you to collect some results for your own data sets with `./benchmark` (and `./histogram`).
 
 
@@ -249,4 +253,4 @@ I highly encourage you to collect some results for your own data sets with `./be
 * if the convenience wrappers need to sort (histogram etc.) then it call C's `qsort` which might not be the fastest way to sort integers
 * I haven't tested data sets with a huge number of symbols, however I doubt the actual need for more than 10^6 distinct symbols
 * and heavily skewed/degenerated data sets were'nt analyzed as well
-* in-depth code testing, such as fuzzying, wasn't done
+* ~~in-depth code testing, such as fuzzying, wasn't done~~

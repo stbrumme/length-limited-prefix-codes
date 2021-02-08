@@ -35,6 +35,14 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
   // at least one code needs to be in use
   if (numCodes == 0 || maxLength == 0)
     return 0;
+  // one or two codes are always encoded with a single bit
+  if (numCodes <= 2)
+  {
+    A[0] = 1;
+    if (numCodes == 2)
+      A[1] = 1;
+    return 1;
+  }
 
   // A[] is an input  parameter (stores the histogram) as well as
   //        an output parameter (stores the code lengths)
@@ -213,7 +221,6 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
         numMerged++;
       }
     }
-
     // note that the mask was originally slowly shifted left by the merging loop
     mask >>= 1;
 
@@ -243,7 +250,12 @@ static int compareKeyValue(const void* a, const void* b)
 {
   struct KeyValue* aa = (struct KeyValue*) a;
   struct KeyValue* bb = (struct KeyValue*) b;
-  return aa->key - bb->key; // negative if a < b, zero if a == b, positive if a > b
+  // negative if a < b, zero if a == b, positive if a > b
+  if (aa->key < bb->key)
+    return -1;
+  if (aa->key > bb->key)
+    return +1;
+  return 0;
 }
 
 

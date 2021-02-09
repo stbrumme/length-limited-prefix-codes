@@ -140,6 +140,11 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
       sum = previous[numMerged * 2] + previous[numMerged * 2 + 1];
     }
 
+    // make sure every code from the histogram is included
+    // (relevant if histogram is very skewed with a few outliers)
+    while (numHist < numCodes)
+      current[numCurrent++] = histogram[numHist++];
+
     // prepare next mask
     mask <<= 1;
 

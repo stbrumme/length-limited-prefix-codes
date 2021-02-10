@@ -7,6 +7,12 @@
 #include "packagemerge.h"
 #include <stdlib.h>       // malloc/free/qsort
 
+
+
+//#include <stdio.h>
+
+
+
 // ----- package-merge algorithm -----
 
 // to me the best explanation is Sebastian Gesemann's Bachelor Thesis (in German only / University of Paderborn, 2004)
@@ -15,7 +21,7 @@
 typedef unsigned long long BitMask;
 typedef unsigned long long HistItem;
 
-/// compute limited prefix code length based on Larmore/Hirschberg's package-merge algorithm
+/// compute limited prefix code lengths based on Larmore/Hirschberg's package-merge algorithm
 /** - histogram must be in ascending order and no entry must be zero
  *  - the function rejects maxLength > 63 but I don't see any practical reasons you would need a larger limit ...
  *  @param  maxLength  maximum code length, e.g. 15 for DEFLATE or JPEG
@@ -35,6 +41,7 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
   // at least one code needs to be in use
   if (numCodes == 0 || maxLength == 0)
     return 0;
+
   // one or two codes are always encoded with a single bit
   if (numCodes <= 2)
   {
@@ -55,6 +62,7 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
   // check maximum bit length
   if (maxLength > 8*sizeof(BitMask) - 1) // 8*8-1 = 63
     return 0;
+
   // at least log2(numCodes) bits required for every valid prefix code
   unsigned long long encodingLimit = 1ULL << maxLength;
   if (encodingLimit < numCodes)
@@ -200,7 +208,7 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
 
   // start with analyzing the first 2n-2 values
   unsigned int numAnalyze = numRelevant;
-  while (numAnalyze != 0) // stops if nothing but symbols are found in an iteration
+  while (mask != 0) // stops if nothing but symbols are found in an iteration
   {
     // number of merged packages seen so far
     unsigned int numMerged = 0;
@@ -226,12 +234,17 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
         numMerged++;
       }
     }
-    // note that the mask was originally slowly shifted left by the merging loop
-    mask >>= 1;
 
     // look only at those values responsible for merged packages
     numAnalyze = 2 * numMerged;
+
+    // note that the mask was originally slowly shifted left by the merging loop
+    mask >>= 1;
   }
+
+  // last iteration can't have any merges
+  for (i = 0; i < numAnalyze; i++)
+    codeLengths[i]++;
 
   // it's a free world ...
   free(isMerged);
@@ -307,7 +320,7 @@ unsigned char packageMerge(unsigned char maxLength, unsigned int numCodes, const
   }
   // now storeAt == numNonZero
 
-  // invoke C standary libary's qsort
+  // invoke C standard library's qsort
   qsort(mapping, numNonZero, sizeof(struct KeyValue), compareKeyValue);
 
   // extract ascendingly ordered histogram

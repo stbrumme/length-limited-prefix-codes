@@ -152,7 +152,7 @@ unsigned char moffat(unsigned int numCodes, const unsigned int histogram[], unsi
   }
   // now storeAt == numNonZero
 
-  // invoke C standary libary's qsort
+  // invoke C standard library's qsort
   qsort(mapping, numNonZero, sizeof(struct KeyValue), compareKeyValue);
 
   // extract ascendingly ordered histogram

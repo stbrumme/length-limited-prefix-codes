@@ -73,7 +73,7 @@ unsigned char limitedBzip2(unsigned char maxLength, unsigned int numCodes, const
   }
   // now storeAt == numNonZero
 
-  // invoke C standary libary's qsort
+  // invoke C standard library's qsort
   qsort(mapping, numNonZero, sizeof(struct KeyValue), compareKeyValue);
 
   // extract ascendingly ordered histogram

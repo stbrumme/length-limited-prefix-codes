@@ -8,11 +8,6 @@
 #include <stdlib.h>       // malloc/free/qsort
 
 
-
-//#include <stdio.h>
-
-
-
 // ----- package-merge algorithm -----
 
 // to me the best explanation is Sebastian Gesemann's Bachelor Thesis (in German only / University of Paderborn, 2004)
@@ -117,9 +112,9 @@ unsigned char packageMergeSortedInPlace(unsigned char maxLength, unsigned int nu
     HistItem sum = current[0] + current[1]; // same as previous[0] + previous[1]
 
     // copy histogram and insert merged sums whenever possible
-    unsigned int numCurrent = 2;                     // current[0] and current[1] were already set
-    unsigned int numHist    = numCurrent;            // we took them from the histogram
-    unsigned int numMerged  = 0;                     // but so far no package inserted (however, it's precomputed in "sum")
+    unsigned int numCurrent = 2;            // current[0] and current[1] were already set
+    unsigned int numHist    = numCurrent;   // we took them from the histogram
+    unsigned int numMerged  = 0;            // but so far no package inserted (however, it's precomputed in "sum")
     for (;;) // stop/break is inside the loop
     {
       // the next package isn't better than the next histogram item ?
